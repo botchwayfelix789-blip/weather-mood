@@ -100,6 +100,7 @@ body[data-mood="clear-night"] .scene__stars { opacity: .9; }
 .app__title { font-size: clamp(2.2rem, 8vw, 3rem); font-weight: 700; letter-spacing: -0.02em; }
 .app__tagline { color: var(--ink-soft); font-size: 0.95rem; margin-top: 4px; }
 
+.searchbar { position: relative; }
 .search { display: flex; gap: 8px; }
 .search__input {
   flex: 1; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--card-border);
@@ -118,6 +119,28 @@ body[data-mood="rain"] .search__btn,
 body[data-mood="storm"] .search__btn { background: rgba(255,255,255,.9); color: #10233f; }
 .search__btn:hover { transform: translateY(-1px); }
 .search__btn:active { transform: translateY(0) scale(.97); }
+
+/* ---------- Autocomplete suggestions ---------- */
+.suggestions {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 30;
+  list-style: none; margin: 0; padding: 6px;
+  background: var(--card); border: 1px solid var(--card-border); border-radius: 16px;
+  box-shadow: var(--shadow); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  max-height: 320px; overflow-y: auto; animation: rise .18s ease;
+}
+.suggestion {
+  display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 11px;
+  cursor: pointer; transition: background .12s;
+}
+.suggestion:hover, .suggestion.is-active { background: rgba(255,255,255,.34); }
+body[data-mood="clear-night"] .suggestion:hover, body[data-mood="clear-night"] .suggestion.is-active,
+body[data-mood="rain"] .suggestion:hover, body[data-mood="rain"] .suggestion.is-active,
+body[data-mood="storm"] .suggestion:hover, body[data-mood="storm"] .suggestion.is-active { background: rgba(255,255,255,.16); }
+.suggestion__pin { flex: none; opacity: .6; }
+.suggestion__text { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.suggestion__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestion__meta { font-size: .82rem; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestions__empty { padding: 12px 14px; color: var(--ink-soft); font-size: .9rem; text-align: center; }
 
 .card {
   background: var(--card); border: 1px solid var(--card-border); border-radius: 22px;

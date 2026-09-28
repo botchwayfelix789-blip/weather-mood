@@ -27,20 +27,28 @@
       <p class="app__tagline">Search a city — the whole page changes with the sky.</p>
     </header>
 
-    <form class="search" id="search-form" autocomplete="off">
-      <input
-        class="search__input"
-        id="city-input"
-        type="text"
-        name="city"
-        placeholder="Try “Accra”, “Tokyo”, “Reykjavik”…"
-        aria-label="City name"
-        required
-      />
-      <button class="search__btn" type="submit" aria-label="Search">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
-      </button>
-    </form>
+    <div class="searchbar">
+      <form class="search" id="search-form" autocomplete="off">
+        <input
+          class="search__input"
+          id="city-input"
+          type="text"
+          name="city"
+          placeholder="Start typing a city…"
+          aria-label="City name"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded="false"
+          aria-controls="suggestions"
+          autocomplete="off"
+          required
+        />
+        <button class="search__btn" type="submit" aria-label="Search">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        </button>
+      </form>
+      <ul class="suggestions" id="suggestions" role="listbox" hidden></ul>
+    </div>
 
     <section class="card" id="card" aria-live="polite">
       <div class="state state--idle" id="state-idle">
@@ -91,7 +99,6 @@
 
     <footer class="app__foot">
       <span id="mood-label">—</span>
-      <span class="app__credit">Live data from Open-Meteo · no API key needed</span>
     </footer>
   </main>
 

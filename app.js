@@ -5,6 +5,7 @@
 
 const form = document.getElementById("search-form");
 const input = document.getElementById("city-input");
+const suggestionsEl = document.getElementById("suggestions");
 
 const els = {
   idle: document.getElementById("state-idle"),
@@ -24,7 +25,6 @@ const els = {
 };
 
 // WMO weather codes -> { text, icon, mood, moodLabel }
-// mood drives the page theme via <body data-mood="...">
 function describe(code, isDay) {
   const day = isDay ? "clear-day" : "clear-night";
   const map = {
@@ -67,13 +67,39 @@ function show(state) {
   els.weather.hidden = state !== "weather";
 }
 
-async function fetchJSON(url) {
-  const res = await fetch(url);
+async function fetchJSON(url, signal) {
+  const res = await fetch(url, signal ? { signal } : undefined);
   if (!res.ok) throw new Error(`Network error (${res.status})`);
   return res.json();
 }
 
+function labelFor(r) {
+  return [r.name, r.admin1, r.country].filter(Boolean);
+}
+
+// ---------- Weather for a resolved place ----------
+async function loadWeatherFor(place) {
+  closeSuggestions();
+  input.value = place.name;
+  show("loading");
+  try {
+    const wx = await fetchJSON(
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}` +
+      `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m` +
+      `&timezone=auto`
+    );
+    render(wx.current, { name: place.name, country: place.country, admin1: place.admin1, tz: wx.timezone });
+  } catch (err) {
+    els.errorText.textContent = err.message || "Something went wrong.";
+    show("error");
+    document.body.dataset.mood = "default";
+    els.moodLabel.textContent = "—";
+  }
+}
+
+// ---------- Geocode a free-text query, then load weather ----------
 async function getWeather(city) {
+  closeSuggestions();
   show("loading");
   try {
     const geo = await fetchJSON(
@@ -82,14 +108,7 @@ async function getWeather(city) {
     if (!geo.results || geo.results.length === 0) {
       throw new Error(`Couldn't find "${city}". Check the spelling?`);
     }
-    const { latitude, longitude, name, country, admin1 } = geo.results[0];
-
-    const wx = await fetchJSON(
-      `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-      `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m` +
-      `&timezone=auto`
-    );
-    render(wx.current, { name, country, admin1, tz: wx.timezone });
+    await loadWeatherFor(geo.results[0]);
   } catch (err) {
     els.errorText.textContent = err.message || "Something went wrong.";
     show("error");
@@ -117,10 +136,129 @@ function render(cur, place) {
   show("weather");
 }
 
+/* =====================================================================
+   Real-time autocomplete
+   ===================================================================== */
+let results = [];        // current suggestion results
+let activeIndex = -1;    // keyboard-highlighted suggestion
+let debounceId = null;   // debounce timer
+let inFlight = null;     // AbortController for the latest suggestion request
+let seq = 0;             // request sequence, so stale responses are ignored
+
+function closeSuggestions() {
+  suggestionsEl.hidden = true;
+  suggestionsEl.innerHTML = "";
+  results = [];
+  activeIndex = -1;
+  input.setAttribute("aria-expanded", "false");
+}
+
+function renderSuggestions() {
+  if (results.length === 0) {
+    suggestionsEl.innerHTML = `<li class="suggestions__empty">No matches — keep typing…</li>`;
+    suggestionsEl.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    return;
+  }
+  suggestionsEl.innerHTML = "";
+  results.forEach((r, i) => {
+    const parts = labelFor(r);
+    const li = document.createElement("li");
+    li.className = "suggestion" + (i === activeIndex ? " is-active" : "");
+    li.setAttribute("role", "option");
+    li.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
+    li.innerHTML =
+      `<span class="suggestion__pin">📍</span>` +
+      `<span class="suggestion__text">` +
+      `<span class="suggestion__name">${parts[0]}</span>` +
+      (parts.length > 1 ? `<span class="suggestion__meta">${parts.slice(1).join(", ")}</span>` : "") +
+      `</span>`;
+    li.addEventListener("mousedown", (e) => {
+      e.preventDefault(); // keep focus, avoid the input blur closing first
+      loadWeatherFor(r);
+    });
+    li.addEventListener("mouseenter", () => {
+      activeIndex = i;
+      highlight();
+    });
+    suggestionsEl.appendChild(li);
+  });
+  suggestionsEl.hidden = false;
+  input.setAttribute("aria-expanded", "true");
+}
+
+function highlight() {
+  [...suggestionsEl.children].forEach((li, i) => {
+    const on = i === activeIndex;
+    li.classList.toggle("is-active", on);
+    li.setAttribute("aria-selected", on ? "true" : "false");
+  });
+}
+
+async function fetchSuggestions(query) {
+  if (inFlight) inFlight.abort();
+  inFlight = new AbortController();
+  const mine = ++seq;
+  try {
+    const geo = await fetchJSON(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=6&language=en&format=json`,
+      inFlight.signal
+    );
+    if (mine !== seq) return; // a newer request has superseded this one
+    results = geo.results || [];
+    activeIndex = -1;
+    renderSuggestions();
+  } catch (err) {
+    if (err.name === "AbortError") return; // expected when typing fast
+    // Network hiccup on suggestions is non-fatal — just hide them.
+    closeSuggestions();
+  }
+}
+
+input.addEventListener("input", () => {
+  const q = input.value.trim();
+  clearTimeout(debounceId);
+  if (q.length < 2) {
+    closeSuggestions();
+    return;
+  }
+  debounceId = setTimeout(() => fetchSuggestions(q), 220);
+});
+
+input.addEventListener("keydown", (e) => {
+  if (suggestionsEl.hidden || results.length === 0) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    activeIndex = (activeIndex + 1) % results.length;
+    highlight();
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    activeIndex = (activeIndex - 1 + results.length) % results.length;
+    highlight();
+  } else if (e.key === "Enter") {
+    if (activeIndex >= 0) {
+      e.preventDefault();
+      loadWeatherFor(results[activeIndex]);
+    }
+  } else if (e.key === "Escape") {
+    closeSuggestions();
+  }
+});
+
+// Close the dropdown when focus leaves the search area.
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".searchbar")) closeSuggestions();
+});
+
 form.addEventListener("submit", (e) => {
   e.preventDefault();
-  const city = input.value.trim();
-  if (city) getWeather(city);
+  // If a suggestion is highlighted, use it; otherwise geocode the raw text.
+  if (activeIndex >= 0 && results[activeIndex]) {
+    loadWeatherFor(results[activeIndex]);
+  } else {
+    const city = input.value.trim();
+    if (city) getWeather(city);
+  }
 });
 
 // A friendly first impression.
