@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weather Mood</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-mood="default">
+  <div class="scene" aria-hidden="true">
+    <div class="scene__sun"></div>
+    <div class="scene__clouds">
+      <span class="cloud cloud--1"></span>
+      <span class="cloud cloud--2"></span>
+      <span class="cloud cloud--3"></span>
+    </div>
+    <div class="scene__rain"></div>
+    <div class="scene__stars"></div>
+  </div>
+
+  <main class="app">
+    <header class="app__head">
+      <h1 class="app__title">Weather&nbsp;Mood</h1>
+      <p class="app__tagline">Search a city — the whole page changes with the sky.</p>
+    </header>
+
+    <form class="search" id="search-form" autocomplete="off">
+      <input
+        class="search__input"
+        id="city-input"
+        type="text"
+        name="city"
+        placeholder="Try “Accra”, “Tokyo”, “Reykjavik”…"
+        aria-label="City name"
+        required
+      />
+      <button class="search__btn" type="submit" aria-label="Search">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="m21 21-4.3-4.3"></path></svg>
+      </button>
+    </form>
+
+    <section class="card" id="card" aria-live="polite">
+      <div class="state state--idle" id="state-idle">
+        <div class="state__emoji">🌤️</div>
+        <p class="state__text">Where should we look?</p>
+      </div>
+
+      <div class="state state--loading" id="state-loading" hidden>
+        <div class="spinner"></div>
+        <p class="state__text">Reading the sky…</p>
+      </div>
+
+      <div class="state state--error" id="state-error" hidden>
+        <div class="state__emoji">🧭</div>
+        <p class="state__text" id="error-text">Something went wrong.</p>
+      </div>
+
+      <div class="weather" id="weather" hidden>
+        <div class="weather__top">
+          <div>
+            <p class="weather__place" id="place">—</p>
+            <p class="weather__desc" id="desc">—</p>
+          </div>
+          <div class="weather__icon" id="icon">☀️</div>
+        </div>
+
+        <div class="weather__temp">
+          <span id="temp">—</span><span class="weather__unit">°C</span>
+        </div>
+        <p class="weather__feels">Feels like <span id="feels">—</span>°</p>
+
+        <div class="weather__grid">
+          <div class="stat">
+            <span class="stat__label">Humidity</span>
+            <span class="stat__value" id="humidity">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Wind</span>
+            <span class="stat__value" id="wind">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Local time</span>
+            <span class="stat__value" id="localtime">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="app__foot">
+      <span id="mood-label">—</span>
+      <span class="app__credit">Live data from Open-Meteo · no API key needed</span>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
