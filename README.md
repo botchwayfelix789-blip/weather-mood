@@ -25,10 +25,7 @@ python -m http.server 8000
 Or: `npx serve .`
 
 ## Deploy
-No build step, so hosting is drag-and-drop:
-- **Netlify** — drag this folder onto <https://app.netlify.com/drop>.
-- **Vercel** — run `vercel` in this folder (framework preset: *Other*, no build command).
-- **GitHub Pages** — push this folder as a repo and enable Pages on `main`.
+- **Netlify** 
 
 ## Files
 | File | Purpose |
